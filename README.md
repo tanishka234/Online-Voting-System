@@ -1,4 +1,4 @@
-# 🗳️ Online Voting System
+<img width="975" height="461" alt="image" src="https://github.com/user-attachments/assets/6e0dcd17-ce1d-40ce-849e-8dfc70b730c8" /># 🗳️ Online Voting System
 
 A secure and efficient web-based voting platform developed using Python, Flask, SQLite, HTML, CSS, and JavaScript. The system enables users to participate in elections digitally while ensuring transparency, security, and fairness throughout the voting process.
 
@@ -83,7 +83,7 @@ Online-Voting-System/
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/Online-Voting-System.git
+git clone https://github.com/tanishka234/Online-Voting-System.git
 ```
 
 ### Navigate to Project Directory
@@ -167,7 +167,9 @@ Provides administrative controls for managing the entire system.
 ## 📸 Screenshots
 
 ### Home Page
-_Add screenshot here_
+![Uploading image.png…]()
+
+
 
 ### Login Page
 _Add screenshot here_
