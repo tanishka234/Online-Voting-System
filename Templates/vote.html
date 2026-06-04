@@ -1,0 +1,717 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="voting-container">
+    <div class="container">
+        <h2 class="text-center"><i class="fas fa-vote-yea"></i> Electronic Voting Machine</h2>
+        <p class="text-center">Select your candidate carefully. This action cannot be undone.</p>
+        
+        <div class="voter-info-card">
+            <div class="voter-details">
+                <h4><i class="fas fa-user-check"></i> Voter Verified</h4>
+                <p><strong>Voter ID:</strong> {{ session.voter_id }}</p>
+                <p><strong>Name:</strong> {{ session.voter_name }}</p>
+            </div>
+            <div class="vote-instructions">
+                <p><i class="fas fa-info-circle"></i> Instructions:</p>
+                <ul>
+                    <li>Select your preferred candidate</li>
+                    <li>Review your selection</li>
+                    <li>Click "Submit Vote" to confirm</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="candidates-list" id="candidatesList">
+            {% for candidate in candidates %}
+            <div class="candidate-option" 
+                 data-candidate-id="{{ candidate.candidate_id }}"
+                 onclick="selectCandidate(this, '{{ candidate.candidate_id }}', '{{ candidate.name|replace("'", "\\'") }}', '{{ candidate.party_name|replace("'", "\\'") }}', '{{ candidate.candidate_photo or '' }}', '{{ candidate.party_symbol or '' }}')">
+                
+                <div class="candidate-header">
+                    <div class="candidate-profile">
+                        {% if candidate.candidate_photo and candidate.candidate_photo.strip() %}
+                        <img src="{{ candidate.candidate_photo }}" alt="{{ candidate.name }}" 
+                             onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIzMCIgZmlsbD0iIzQyODVGNCIvPjxwYXRoIGQ9Ik0zMCAzNUMzMy4zMTM3IDM1IDM2IDMyLjMxMzcgMzYgMjlDMzYgMjUuNjg2MyAzMy4zMTM3IDIzIDMwIDIzQzI2LjY4NjMgMjMgMjQgMjUuNjg2MyAyNCAyOUMyNCAzMi4zMTM3IDI2LjY4NjMgMzUgMzAgMzVaIiBmaWxsPSJ3aGl0ZSIvPjxwYXRoIGQ9Ik0yMi41IDQwLjVDMjIuNSA0MS44ODA3IDIzLjYxOTMgNDMgMjUgNDNIMzVDMzYuMzgwNyA0MyAzNy41IDQxLjg4MDcgMzcuNSA0MC41QzM3LjUgMzguODA5MyAzNi43NSAzNi4zIDM0LjI5NzkgMzQuNTUyOUMzMi40MTkzIDMzLjE4NTcgMjkuNzAwNyAzMi41IDMwIDMyLjVDMjkuNzAwNyAzMi41IDI3LjU4MDcgMzMuMTg1NyAyNS43MDIxIDM0LjU1MjlDMjMuMjUgMzYuMyAyMi41IDM4LjgwOTMgMjIuNSA0MC41WiIgZmlsbD0id2hpdGUiLz48L3N2Zz4='">
+                        {% else %}
+                        <div class="candidate-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="candidate-name">
+                        <h3>{{ candidate.name }}</h3>
+                        <p class="party-name">{{ candidate.party_name }}</p>
+                    </div>
+                </div>
+                
+                {% if candidate.party_symbol and candidate.party_symbol.strip() %}
+                <div class="party-symbol">
+                    <!-- <span class="symbol-label">Party Symbol:</span> -->
+                    <div class="symbol-container">
+                        <img src="{{ candidate.party_symbol }}" alt="{{ candidate.party_name }} Symbol" class="symbol-img"
+                             onload="this.style.display='inline-block'"
+                             onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML += '<span class=\'symbol-fallback\'>Symbol not available</span>'">
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="candidate-manifesto">
+                    <p>{{ candidate.manifesto[:150] }}{% if candidate.manifesto|length > 150 %}...{% endif %}</p>
+                </div>
+                
+                <div class="select-indicator">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Click to select this candidate</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="vote-confirm" id="voteConfirm" style="display: none;">
+            <h3><i class="fas fa-check-circle"></i> Confirm Your Vote</h3>
+            <div class="selected-candidate-details" id="selectedCandidateDetails">
+                <!-- Will be filled by JavaScript -->
+            </div>
+            
+            <div class="location-section">
+                <label for="voteLocation"><i class="fas fa-map-marker-alt"></i> Voting Location</label>
+                <div class="location-input-group">
+                    <input type="text" id="voteLocation" class="form-control" placeholder="Fetching location..." readonly>
+                    <button type="button" class="btn btn-secondary" onclick="getVoteLocation()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="location-status" id="locationStatus">
+                    <small class="text-muted"><i class="fas fa-spinner fa-spin"></i> Detecting your location...</small>
+                </div>
+                <small class="text-muted">You can also enter location manually if not detected</small>
+                <input type="text" id="manualLocation" class="form-control mt-2" placeholder="Enter location manually (optional)" style="display: none;">
+                <button type="button" class="btn btn-sm btn-link" onclick="toggleManualLocation()">Enter location manually</button>
+            </div>
+            
+            <div class="confirmation-buttons">
+                <button type="button" class="btn btn-secondary" onclick="cancelSelection()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="submitVoteBtn" onclick="submitVote()">
+                    <i class="fas fa-vote-yea"></i> Submit Vote
+                </button>
+            </div>
+        </div>
+        
+        <div class="vote-timer">
+            <i class="fas fa-clock"></i> Session expires in: <span id="timer">15:00</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.voter-info-card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.voter-details h4 {
+    color: #28a745;
+    margin-bottom: 10px;
+}
+
+.voter-details p {
+    margin: 5px 0;
+}
+
+.vote-instructions {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.vote-instructions ul {
+    margin: 10px 0 0;
+    padding-left: 20px;
+}
+
+.vote-instructions li {
+    margin-bottom: 5px;
+}
+
+.candidate-option {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 15px 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.candidate-option:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.candidate-option.selected {
+    border-color: #28a745;
+    background: #f0fff4;
+}
+
+.candidate-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.candidate-profile {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--primary-color), #6c63ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.candidate-profile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.candidate-icon {
+    font-size: 30px;
+    color: white;
+}
+
+.candidate-name h3 {
+    margin: 0 0 5px;
+    color: var(--text-color);
+    font-size: 1.3rem;
+}
+
+.candidate-name .party-name {
+    margin: 0;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.party-symbol {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: auto;
+    
+}
+
+.symbol-label {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-width: 100px;
+   
+}
+
+.symbol-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    
+}
+
+.symbol-img {
+    max-width: 100px;
+    max-height: 100px;
+    object-fit: contain;
+    border: 1px solid var(--border-color);
+    padding: 5px;
+    background: white;
+    border-radius: 5px;
+}
+
+.symbol-fallback {
+    color: var(--secondary-color);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.candidate-manifesto {
+    margin: 10px 0;
+    color: var(--secondary-color);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
+.select-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    color: var(--primary-color);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.candidate-option.selected .select-indicator {
+    background: #28a745;
+    color: white;
+}
+
+.vote-confirm {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 30px;
+    margin: 30px 0;
+    box-shadow: var(--shadow);
+    border: 2px solid #28a745;
+}
+
+.selected-candidate-details {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.selected-candidate-display {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.selected-candidate-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #28a745;
+    flex-shrink: 0;
+}
+
+.selected-candidate-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.selected-candidate-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), #6c63ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 35px;
+    flex-shrink: 0;
+}
+
+.selected-candidate-info h4 {
+    margin: 0 0 5px;
+    color: var(--text-color);
+    font-size: 1.5rem;
+}
+
+.selected-party {
+    margin: 5px 0;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.selected-symbol {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.selected-symbol img {
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: contain;
+    border: 1px solid var(--border-color);
+    padding: 3px;
+    background: white;
+    border-radius: 5px;
+}
+
+.warning-box {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 8px;
+    margin-top: 15px;
+    color: #856404;
+}
+
+.warning-box i {
+    font-size: 1.5rem;
+    color: #856404;
+}
+
+.location-section {
+    margin: 20px 0;
+}
+
+.location-input-group {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.location-input-group input {
+    flex: 1;
+}
+
+.location-status {
+    margin: 5px 0;
+}
+
+.mt-2 {
+    margin-top: 10px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.875rem;
+}
+
+.confirmation-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.vote-timer {
+    text-align: center;
+    padding: 15px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    margin-top: 20px;
+    border: 1px solid var(--border-color);
+}
+
+#timer {
+    font-weight: bold;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-family: monospace;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .voter-info-card {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .candidate-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .party-symbol {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .selected-candidate-display {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .confirmation-buttons {
+        flex-direction: column;
+    }
+    
+    .confirmation-buttons button {
+        width: 100%;
+    }
+    
+    .location-input-group {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+let timeLeft = 15 * 60;
+let selectedCandidateId = null;
+let selectedCandidateName = null;
+let selectedPartyName = null;
+let selectedProfileUrl = null;
+let selectedPartySymbol = null;
+
+function updateTimer() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    document.getElementById('timer').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (timeLeft <= 0) {
+        alert('Voting session expired. Please start again.');
+        window.location.href = '/verify';
+    }
+    timeLeft--;
+}
+
+setInterval(updateTimer, 1000);
+
+function toggleManualLocation() {
+    const manualInput = document.getElementById('manualLocation');
+    if (manualInput.style.display === 'none') {
+        manualInput.style.display = 'block';
+    } else {
+        manualInput.style.display = 'none';
+    }
+}
+
+function getVoteLocation() {
+    const locationField = document.getElementById('voteLocation');
+    const locationStatus = document.getElementById('locationStatus');
+    
+    locationField.value = 'Fetching location...';
+    locationStatus.innerHTML = '<small class="text-muted"><i class="fas fa-spinner fa-spin"></i> Detecting your location...</small>';
+    
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // Use reverse geocoding to get actual address
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=18&addressdetails=1`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let location = '';
+                        if (data.address) {
+                            const parts = [];
+                            if (data.address.road) parts.push(data.address.road);
+                            if (data.address.suburb) parts.push(data.address.suburb);
+                            if (data.address.city || data.address.town || data.address.village) {
+                                parts.push(data.address.city || data.address.town || data.address.village);
+                            }
+                            if (data.address.state) parts.push(data.address.state);
+                            if (data.address.country) parts.push(data.address.country);
+                            
+                            location = parts.join(', ');
+                        }
+                        
+                        if (location) {
+                            locationField.value = location;
+                            locationStatus.innerHTML = '<small class="text-success"><i class="fas fa-check-circle"></i> Location detected successfully</small>';
+                        } else {
+                            locationField.value = `Lat: ${position.coords.latitude.toFixed(4)}, Lon: ${position.coords.longitude.toFixed(4)}`;
+                            locationStatus.innerHTML = '<small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Approximate location (coordinates)</small>';
+                        }
+                    })
+                    .catch(error => {
+                        locationField.value = `Lat: ${position.coords.latitude.toFixed(4)}, Lon: ${position.coords.longitude.toFixed(4)}`;
+                        locationStatus.innerHTML = '<small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Approximate location (coordinates)</small>';
+                    });
+            },
+            function(error) {
+                let errorMsg = '';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMsg = 'Location access denied. Please enter manually.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMsg = 'Location information unavailable. Please enter manually.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMsg = 'Location request timeout. Please enter manually.';
+                        break;
+                    default:
+                        errorMsg = 'Location error. Please enter manually.';
+                }
+                locationField.value = '';
+                locationField.placeholder = 'Enter location manually';
+                locationStatus.innerHTML = `<small class="text-danger"><i class="fas fa-exclamation-circle"></i> ${errorMsg}</small>`;
+                
+                // Show manual input
+                document.getElementById('manualLocation').style.display = 'block';
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        locationField.value = '';
+        locationField.placeholder = 'Geolocation not supported. Enter manually';
+        locationStatus.innerHTML = '<small class="text-danger"><i class="fas fa-exclamation-circle"></i> Geolocation not supported by your browser</small>';
+        document.getElementById('manualLocation').style.display = 'block';
+    }
+}
+
+window.addEventListener('load', getVoteLocation);
+
+function selectCandidate(element, candidateId, candidateName, partyName, profileUrl, partySymbol) {
+    document.querySelectorAll('.candidate-option').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    element.classList.add('selected');
+    
+    selectedCandidateId = candidateId;
+    selectedCandidateName = candidateName;
+    selectedPartyName = partyName;
+    selectedProfileUrl = profileUrl;
+    selectedPartySymbol = partySymbol;
+    
+    const selectedCandidateDetails = document.getElementById('selectedCandidateDetails');
+    
+    let imageHtml = '';
+    if (profileUrl && profileUrl.trim()) {
+        imageHtml = `<div class="selected-candidate-image"><img src="${profileUrl}" alt="${candidateName}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'selected-candidate-icon\'><i class=\'fas fa-user-tie\'></i></div>'"></div>`;
+    } else {
+        imageHtml = `<div class="selected-candidate-icon"><i class="fas fa-user-tie"></i></div>`;
+    }
+    
+    let symbolHtml = '';
+    if (partySymbol && partySymbol.trim()) {
+        symbolHtml = `
+            <div class="selected-symbol">
+                <strong>Symbol:</strong>
+                <img src="${partySymbol}" alt="${partyName} Symbol" onerror="this.style.display='none'">
+            </div>
+        `;
+    }
+    
+    selectedCandidateDetails.innerHTML = `
+        <div class="selected-candidate-display">
+            ${imageHtml}
+            <div class="selected-candidate-info">
+                <h4>${candidateName}</h4>
+                <p class="selected-party">${partyName}</p>
+                ${symbolHtml}
+                <p><small>Candidate ID: ${candidateId}</small></p>
+            </div>
+        </div>
+        <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><strong>Warning:</strong> Once submitted, your vote cannot be changed or undone.</span>
+        </div>
+    `;
+    
+    document.getElementById('voteConfirm').style.display = 'block';
+    document.getElementById('voteConfirm').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelSelection() {
+    document.querySelectorAll('.candidate-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    
+    document.getElementById('voteConfirm').style.display = 'none';
+    
+    selectedCandidateId = null;
+    selectedCandidateName = null;
+    selectedPartyName = null;
+    selectedProfileUrl = null;
+    selectedPartySymbol = null;
+}
+
+async function submitVote() {
+    if (!selectedCandidateId) {
+        alert('Please select a candidate first!');
+        return;
+    }
+    
+    // Get location - either from auto field or manual input
+    let location = document.getElementById('voteLocation').value;
+    const manualLocation = document.getElementById('manualLocation').value;
+    
+    if (manualLocation && manualLocation.trim() !== '') {
+        location = manualLocation.trim();
+    }
+    
+    if (!location || location === 'Fetching location...' || location === '') {
+        const enterLocation = prompt('Please enter your voting location:', 'Polling Booth, City');
+        if (!enterLocation || enterLocation.trim() === '') {
+            alert('Location is required to submit your vote.');
+            return;
+        }
+        location = enterLocation.trim();
+    }
+    
+    if (!confirm(`Are you sure you want to vote for ${selectedCandidateName} (${selectedPartyName})?\n\nLocation: ${location}\n\nThis action cannot be undone!`)) {
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submitVoteBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/submit_vote', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                candidate_id: selectedCandidateId,
+                location: location
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✓ Vote submitted successfully! Generating your receipt...');
+            window.location.href = result.redirect;
+        } else {
+            alert('Error: ' + result.message);
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    } catch (error) {
+        alert('Network error. Please check your connection and try again.');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && selectedCandidateId) {
+        cancelSelection();
+    }
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Voting page loaded');
+});
+</script>
+{% endblock %}

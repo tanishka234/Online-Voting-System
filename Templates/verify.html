@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="verify-form">
+    <h2 class="text-center">Voter Verification</h2>
+    <p class="text-center">Verify your identity to proceed with voting</p>
+    
+    <div class="verification-steps">
+        <div class="step active">
+            <span>1</span>
+            <p>Identity Verification</p>
+        </div>
+        <div class="step">
+            <span>2</span>
+            <p>Location Verification</p>
+        </div>
+        <div class="step">
+            <span>3</span>
+            <p>Voting Interface</p>
+        </div>
+    </div>
+    
+    <form method="POST" action="{{ url_for('verify') }}">
+        <div class="form-group">
+            <label for="voter_id"><i class="fas fa-id-card"></i> Voter ID</label>
+            <input type="text" id="voter_id" name="voter_id" class="form-control" placeholder="Enter your voter ID" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="name"><i class="fas fa-user"></i> Full Name (as per voter ID)</label>
+            <input type="text" id="name" name="name" class="form-control" placeholder="Enter your full name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="location"><i class="fas fa-map-marker-alt"></i> Current Location</label>
+            <div class="location-input">
+                <input type="text" id="location" name="location" class="form-control" placeholder="Allow location access or enter manually" required>
+                <button type="button" class="btn btn-secondary" onclick="getLocation()" id="getLocationBtn">
+                    <i class="fas fa-location-arrow"></i>
+                </button>
+            </div>
+            <small class="form-text">We use location to prevent duplicate voting</small>
+        </div>
+        
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" id="consent" class="form-check-input" required>
+                <label for="consent" class="form-check-label">
+                    I confirm that the information provided is accurate
+                </label>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Verify & Proceed to Vote</button>
+        
+        <div class="text-center mt-3">
+            <p><a href="{{ url_for('index') }}">← Back to Home</a></p>
+        </div>
+    </form>
+</div>
+
+<style>
+.verification-steps {
+    display: flex;
+    justify-content: space-between;
+    margin: 2rem 0;
+    position: relative;
+}
+
+.verification-steps::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--border-color);
+    z-index: 1;
+}
+
+.step {
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.step span {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    line-height: 50px;
+    border-radius: 50%;
+    background: var(--border-color);
+    color: var(--text-color);
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.step.active span {
+    background: var(--primary-color);
+    color: white;
+}
+
+.step p {
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.location-input {
+    display: flex;
+    gap: 10px;
+}
+
+.location-input .form-control {
+    flex: 1;
+}
+</style>
+{% endblock %}

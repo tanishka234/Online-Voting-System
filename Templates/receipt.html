@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="receipt-container">
+    <div class="receipt-header">
+        <i class="fas fa-check-circle success-icon"></i>
+        <h2>Vote Successfully Cast!</h2>
+        <p>Digital Voting Receipt</p>
+    </div>
+    
+    <div class="receipt-details">
+        <div class="receipt-item">
+            <span>Receipt Number:</span>
+            <strong>{{ receipt.receipt_number }}</strong>
+        </div>
+        
+        <div class="receipt-item">
+            <span>Voter Name:</span>
+            <strong>{{ receipt.voter_name }}</strong>
+        </div>
+        
+        <div class="receipt-item">
+            <span>Voter ID:</span>
+            <strong>{{ receipt.voter_id }}</strong>
+        </div>
+        
+        <div class="receipt-item">
+            <span>Selected Candidate:</span>
+            <strong>{{ receipt.candidate_name }}</strong>
+        </div>
+        
+        <div class="receipt-item">
+            <span>Party:</span>
+            <strong>{{ receipt.candidate_party }}</strong>
+        </div>
+        
+        <div class="receipt-item">
+            <span>Date & Time:</span>
+            <strong>{{ receipt.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</strong>
+        </div>
+        
+        <div class="receipt-item">
+            <span>Location:</span>
+            <strong>{{ receipt.location }}</strong>
+        </div>
+        
+        <div class="receipt-item">
+            <span>Status:</span>
+            <strong class="status-valid">{{ receipt.status }}</strong>
+        </div>
+    </div>
+    
+    <div class="receipt-qr">
+        <div id="qrCode"></div>
+        <p>Scan to verify vote</p>
+    </div>
+    
+    <div class="receipt-actions">
+        <button onclick="printReceipt()" class="btn btn-primary">
+            <i class="fas fa-print"></i> Print Receipt
+        </button>
+        <button onclick="downloadReceipt()" class="btn btn-secondary">
+            <i class="fas fa-download"></i> Download PDF
+        </button>
+        <a href="{{ url_for('index') }}" class="btn btn-success">
+            <i class="fas fa-home"></i> Return to Home
+        </a>
+    </div>
+    
+    <div class="receipt-footer">
+        <p><i class="fas fa-shield-alt"></i> This receipt is digitally signed and secured</p>
+        <p class="small-text">Receipt ID: {{ receipt.receipt_number }}</p>
+        <p class="small-text">Generated at: {{ receipt.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</p>
+    </div>
+</div>
+
+<style>
+.success-icon {
+    font-size: 4rem;
+    color: var(--success-color);
+    margin-bottom: 1rem;
+}
+
+.status-valid {
+    color: var(--success-color);
+}
+
+.receipt-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.receipt-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.small-text {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    margin: 0.25rem 0;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// Generate QR code
+const qrData = `eVote Receipt
+Receipt: {{ receipt.receipt_number }}
+Voter: {{ receipt.voter_name }}
+Voter ID: {{ receipt.voter_id }}
+Candidate: {{ receipt.candidate_name }}
+Party: {{ receipt.candidate_party }}
+Time: {{ receipt.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+Status: {{ receipt.status }}
+Verify at: ${window.location.origin}/verify-receipt
+`;
+
+new QRCode(document.getElementById("qrCode"), {
+    text: qrData,
+    width: 128,
+    height: 128,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+});
+
+function printReceipt() {
+    window.print();
+}
+
+function downloadReceipt() {
+    alert('PDF download feature would be implemented in production');
+    // In production, implement PDF generation using libraries like jsPDF
+}
+</script>
+{% endblock %}

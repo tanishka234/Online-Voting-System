@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <!-- Hero Section with Image Slider -->
+    <section class="hero">
+        <div class="slider-container">
+            <div class="slider">
+                <div class="slide active">
+
+                    <img src="{{ url_for('static', filename='images/hero_section.jpg') }}" alt="Election">
+                    <div class="slide-content">
+                        <h1>Secure Online Voting</h1>
+                        <p>Cast your vote safely from anywhere, anytime</p>
+                        <a href="{{ url_for('verify') }}" class="btn btn-primary">Vote Now</a>
+                    </div>
+                </div>
+
+                <div class="slide">
+                     <img src="{{ url_for('static', filename='images/hero1.jpg') }}" alt="Voting System">
+                    <div class="slide-content">
+                        <h1>Democracy Digitized</h1>
+                        <p>Modern voting system for the digital age</p>
+                        <a href="{{ url_for('tutorial') }}" class="btn btn-secondary">Learn How</a>
+                    </div>
+                </div>
+
+            </div>
+            <div class="slider-controls">
+                <button class="prev-slide"><i class="fas fa-chevron-left"></i></button>
+                <button class="next-slide"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section" id="about">
+        <div class="container">
+            <h2 class="section-title">About eVote</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <h3>Revolutionizing Democracy</h3>
+                    <p>eVote is a secure, transparent, and accessible online voting platform designed to modernize the electoral process. Our system ensures:</p>
+                    <ul>
+                        <li><i class="fas fa-shield-alt"></i> End-to-end encryption</li>
+                        <li><i class="fas fa-user-check"></i> Identity verification</li>
+                        <li><i class="fas fa-clock"></i> Real-time results</li>
+                        <li><i class="fas fa-mobile-alt"></i> Mobile accessibility</li>
+                    </ul>
+                    <p>Built with advanced security protocols and user-friendly design, eVote makes voting convenient while maintaining electoral integrity.</p>
+                </div>
+                <div class="about-image">
+                    <img src="{{ url_for('static', filename='images/user_predection.avif') }}" alt="About eVote">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            <div class="features-diagram">
+                <div class="feature-step">
+                    <div class="step-number">1</div>
+                    <i class="fas fa-user-plus"></i>
+                    <h3>Register & Verify</h3>
+                    <p>Create your account and complete identity verification</p>
+                </div>
+                <div class="feature-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="feature-step">
+                    <div class="step-number">2</div>
+                    <i class="fas fa-fingerprint"></i>
+                    <h3>Authentication</h3>
+                    <p>Secure login with multi-factor authentication</p>
+                </div>
+                <div class="feature-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="feature-step">
+                    <div class="step-number">3</div>
+                    <i class="fas fa-vote-yea"></i>
+                    <h3>Cast Your Vote</h3>
+                    <p>Select your candidate in our secure EVM interface</p>
+                </div>
+                <div class="feature-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="feature-step">
+                    <div class="step-number">4</div>
+                    <i class="fas fa-receipt"></i>
+                    <h3>Get Receipt</h3>
+                    <p>Instant digital receipt with voting confirmation</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Candidates Preview -->
+    <!-- <section class="candidates-preview">
+        <div class="container">
+            <h2 class="section-title">Current Candidates</h2>
+            <div class="candidates-grid">
+                {% for candidate in candidates[:4] %}
+                <div class="candidate-card">
+                    <div class="party-symbol">
+                        <i class="fas fa-landmark"></i>
+                    </div>
+                    <h3>{{ candidate.name }}</h3>
+                    <p class="party-name">{{ candidate.party_name }}</p>
+                    <p class="manifesto">{{ candidate.manifesto[:100] }}...</p>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="text-center">
+                <a href="{{ url_for('verify') }}" class="btn btn-primary">View All Candidates & Vote</a>
+            </div>
+        </div>
+    </section> -->
+
+    <!-- Developers Showcase -->
+    <section class="developers-section">
+        <div class="container">
+            <h2 class="section-title">Our Development Team</h2>
+            <div class="developers-scroll">
+                <div class="developers-track">
+                    {% set developers = [
+                        {"name": "Vinay Kumar ", "role": "Lead Backend Developer", "image": "images/vinay.jpeg", "skills": ["Python", "Flask", "PostgreSQL","Database Design", "Java Developer"]},
+                        {"name": "Tanishka Jain", "role": "Frontend Specialist", "image": "images/tanishka.jpeg", "skills": ["JavaScript", "HTML/CSS", "React"]},
+                        {"name": "Sohan Kumar Kamat", "role": "UX/UI Designer", "image": "images/sohan.jpeg", "skills": ["UI Design", "User Research", "Prototyping"]},
+                        {"name": "Tannu Kumari", "role": "Database Administrator", "image": "images/tannu.jpeg", "skills": ["SQL", "Database Optimization", "Data Security"]},
+                        {"name": "Soni Kumari", "role": "Tester", "image": "images/soni.jpeg", "skills": ["Test Automation", "Selenium", "Manual Testing"]},
+                        {"name": "Riya Kumari", "role": "Database Architect", "image": "images/riya.jpeg", "skills": ["SQL", "Redis", "MongoDB"]}
+                    ] %}
+                    
+                    <!-- Original 6 developers -->
+                    {% for developer in developers %}
+                    <div class="developer-card">
+                        <div class="dev-avatar">
+                            <img src="{{ url_for('static', filename=developer.image) }}" alt="{{ developer.name }}" 
+                                 onerror="this.src='{{ url_for('static', filename='images/default-avatar.png') }}'">
+                        </div>
+                        <h4>{{ developer.name }}</h4>
+                        <p class="dev-role">{{ developer.role }}</p>
+                        <div class="dev-skills">
+                            {% for skill in developer.skills %}
+                            <span>{{ skill }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- First 3 developers duplicated for seamless scrolling -->
+                    {% for i in range(3) %}
+                    <div class="developer-card">
+                        <div class="dev-avatar">
+                            <img src="{{ url_for('static', filename=developers[i].image) }}" alt="{{ developers[i].name }}"
+                                 onerror="this.src='{{ url_for('static', filename='images/default-avatar.png') }}'">
+                        </div>
+                        <h4>{{ developers[i].name }}</h4>
+                        <p class="dev-role">{{ developers[i].role }}</p>
+                        <div class="dev-skills">
+                            {% for skill in developers[i].skills %}
+                            <span>{{ skill }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Slider Controls -->
+            <div class="dev-slider-controls">
+                <button class="dev-prev-btn" aria-label="Previous developer">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="dev-next-btn" aria-label="Next developer">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <h3>{{ total_votes or 0 }}</h3>
+                    <p> Total Votes Cast</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-user-check"></i>
+                    <h3>{{ candidates|length or 0 }}</h3>
+                    <p>Active Candidates</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>100%</h3>
+                    <p>System Security</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <h3>24/7</h3>
+                    <p>Availability</p>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Image slider functionality
+let currentSlide = 0;
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+
+function showSlide(index) {
+    slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === index);
+    });
+}
+
+document.querySelector('.next-slide')?.addEventListener('click', () => {
+    currentSlide = (currentSlide + 1) % totalSlides;
+    showSlide(currentSlide);
+});
+
+document.querySelector('.prev-slide')?.addEventListener('click', () => {
+    currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+    showSlide(currentSlide);
+});
+
+// Auto slide every 5 seconds
+setInterval(() => {
+    currentSlide = (currentSlide + 1) % totalSlides;
+    showSlide(currentSlide);
+}, 5000);
+
+// Developers slider functionality
+const devTrack = document.querySelector('.developers-track');
+const devPrevBtn = document.querySelector('.dev-prev-btn');
+const devNextBtn = document.querySelector('.dev-next-btn');
+
+if (devTrack && devNextBtn && devPrevBtn) {
+    let scrollPosition = 0;
+    const cardWidth = 320; // Approximate width of each card
+    const visibleCards = 4; // Number of cards visible at a time
+    
+    devNextBtn.addEventListener('click', () => {
+        scrollPosition = Math.min(scrollPosition + cardWidth, devTrack.scrollWidth - (cardWidth * visibleCards));
+        devTrack.style.transform = `translateX(-${scrollPosition}px)`;
+    });
+    
+    devPrevBtn.addEventListener('click', () => {
+        scrollPosition = Math.max(scrollPosition - cardWidth, 0);
+        devTrack.style.transform = `translateX(-${scrollPosition}px)`;
+    });
+}
+</script>
+{% endblock %}

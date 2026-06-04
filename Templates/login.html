@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-form">
+    <h2 class="text-center">Login to eVote</h2>
+    <p class="text-center">Secure access to the voting system</p>
+    
+    <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+            <label for="email"><i class="fas fa-envelope"></i> Email Address</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password"><i class="fas fa-lock"></i> Password</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+            <div class="text-right">
+                <a href="#" class="small-text">Forgot Password?</a>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Login</button>
+        
+        <div class="divider">
+            <span>OR</span>
+        </div>
+        
+        <div class="text-center">
+            <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+        </div>
+    </form>
+</div>
+
+<style>
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.divider span {
+    padding: 0 15px;
+    color: var(--secondary-color);
+}
+
+.small-text {
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
