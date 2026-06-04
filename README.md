@@ -61,8 +61,11 @@ Online-Voting-System/
 ├── app.py
 ├── config.py
 ├── database.py
+├── fix_admin.py
 ├── models.py
 ├── requirements.txt
+├── reset_database.py
+├── test_admin.py
 ├── README.md
 │
 ├── static/
@@ -72,11 +75,8 @@ Online-Voting-System/
 │
 ├── templates/
 │   ├── admin/
-│   ├── voter/
-│   └── auth/
-│
-└── instance/
-```
+│   ├── components/
+│   
 
 ## ⚙️ Installation
 
