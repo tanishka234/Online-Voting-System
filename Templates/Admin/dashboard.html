@@ -1,0 +1,951 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+        <p>Welcome, Administrator! Manage the voting system from here.</p>
+    </div>
+    
+    <div class="admin-nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="active">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{{ url_for('manage_voters') }}">
+            <i class="fas fa-users"></i> Manage Voters
+        </a>
+        <a href="{{ url_for('manage_candidates') }}">
+            <i class="fas fa-user-tie"></i> Manage Candidates
+        </a>
+        <a href="{{ url_for('vote_receipts') }}">
+            <i class="fas fa-receipt"></i> Vote Receipts
+        </a>
+        <a href="{{ url_for('logout') }}" class="logout">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+    
+    <div class="stats-cards">
+        <div class="stat-card admin-stat">
+            <i class="fas fa-users"></i>
+            <div>
+                <h3>{{ total_voters }}</h3>
+                <p>Total Voters</p>
+            </div>
+        </div>
+        
+        <div class="stat-card admin-stat">
+            <i class="fas fa-user-check"></i>
+            <div>
+                <h3>{{ voted_count }}</h3>
+                <p>Votes Cast</p>
+            </div>
+        </div>
+        
+        <div class="stat-card admin-stat">
+            <i class="fas fa-user-tie"></i>
+            <div>
+                <h3>{{ total_candidates }}</h3>
+                <p>Candidates</p>
+            </div>
+        </div>
+        
+        <div class="stat-card admin-stat">
+            <i class="fas fa-percentage"></i>
+            <div>
+                <h3>{{ ((voted_count / total_voters * 100) if total_voters > 0 else 0)|round(1) }}%</h3>
+                <p>Voter Turnout</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart Type Selector -->
+    <div class="chart-controls">
+        <div class="chart-type-selector">
+            <button class="chart-type-btn active" onclick="changeChartType('bar')">
+                <i class="fas fa-chart-bar"></i> Bar Chart
+            </button>
+            <button class="chart-type-btn" onclick="changeChartType('pie')">
+                <i class="fas fa-chart-pie"></i> Pie Chart
+            </button>
+            <button class="chart-type-btn" onclick="changeChartType('doughnut')">
+                <i class="fas fa-chart-pie"></i> Doughnut Chart
+            </button>
+            <button class="chart-type-btn" onclick="changeChartType('line')">
+                <i class="fas fa-chart-line"></i> Line Chart
+            </button>
+        </div>
+        <div class="chart-actions">
+            <button class="btn btn-sm btn-primary" onclick="exportChart()">
+                <i class="fas fa-download"></i> Export Chart
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="refreshChart()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="chart-container">
+            <h3><i class="fas fa-chart-bar"></i> Vote Distribution</h3>
+            <div class="chart-wrapper">
+                <canvas id="voteChart"></canvas>
+            </div>
+            
+            <!-- Chart Summary -->
+            <div class="chart-summary">
+                <h4>Summary</h4>
+                <div class="summary-stats">
+                    <div class="summary-item">
+                        <span class="label">Total Votes:</span>
+                        <span class="value">{{ voted_count }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Leading Candidate:</span>
+                        <span class="value">
+                            {% if vote_data %}
+                                {% set max_votes = vote_data|map(attribute='votes')|max %}
+                                {% set leading = vote_data|selectattr('votes', 'equalto', max_votes)|first %}
+                                {{ leading.name }} ({{ leading.votes }} votes)
+                            {% else %}
+                                No votes yet
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Average Votes:</span>
+                        <span class="value">
+                            {% if vote_data and vote_data|length > 0 %}
+                                {{ (voted_count / vote_data|length)|round(1) }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="recent-activity">
+            <h3><i class="fas fa-history"></i> Recent Votes</h3>
+            <div class="activity-list" id="recentVotes">
+                <!-- Will be populated by JavaScript -->
+                <div class="loading">Loading recent votes...</div>
+            </div>
+            
+            <!-- Mini Stats -->
+            <div class="mini-stats">
+                <div class="mini-stat">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <span class="mini-label">Last Vote</span>
+                        <span class="mini-value" id="lastVoteTime">Loading...</span>
+                    </div>
+                </div>
+                <div class="mini-stat">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div>
+                        <span class="mini-label">Active Locations</span>
+                        <span class="mini-value" id="activeLocations">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Charts Row -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h4><i class="fas fa-chart-line"></i> Hourly Voting Trend</h4>
+            <div class="small-chart-wrapper">
+                <canvas id="hourlyChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h4><i class="fas fa-chart-pie"></i> Party Distribution</h4>
+            <div class="small-chart-wrapper">
+                <canvas id="partyChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h4><i class="fas fa-percent"></i> Voter Turnout</h4>
+            <div class="small-chart-wrapper">
+                <canvas id="turnoutChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="quick-actions">
+        <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+        <div class="actions-grid">
+            <a href="{{ url_for('manage_voters') }}" class="action-card">
+                <i class="fas fa-user-plus"></i>
+                <span>Add New Voter</span>
+            </a>
+            <a href="{{ url_for('manage_candidates') }}" class="action-card">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add Candidate</span>
+            </a>
+            <button class="action-card" onclick="exportData()">
+                <i class="fas fa-file-export"></i>
+                <span>Export Data</span>
+            </button>
+            <button class="action-card" onclick="generateReport()">
+                <i class="fas fa-file-pdf"></i>
+                <span>Generate Report</span>
+            </button>
+            <button class="action-card" onclick="refreshSystem()">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh System</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Chart.js library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+/* Dashboard Styles */
+.admin-dashboard {
+    padding: 100px 20px 50px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.admin-header {
+    margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.admin-nav {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 10px;
+}
+
+.admin-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.75rem 1.5rem;
+    background: var(--body-bg);
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 5px;
+    transition: var(--transition);
+}
+
+.admin-nav a:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.admin-nav a.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.admin-nav a.logout {
+    background: var(--danger-color);
+    color: white;
+}
+
+.admin-nav a.logout:hover {
+    background: #c82333;
+}
+
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.admin-stat {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem !important;
+}
+
+.admin-stat i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+}
+
+/* Chart Controls */
+.chart-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.chart-type-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.chart-type-btn {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.chart-type-btn:hover {
+    border-color: var(--primary-color);
+    background: rgba(66, 133, 244, 0.1);
+}
+
+.chart-type-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.chart-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 992px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chart-container {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.chart-wrapper {
+    height: 350px;
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.recent-activity {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.chart-container h3, .recent-activity h3 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Chart Summary */
+.chart-summary {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.chart-summary h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--body-bg);
+    border-radius: 5px;
+}
+
+.summary-item .label {
+    color: var(--secondary-color);
+    font-weight: 500;
+}
+
+.summary-item .value {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* Activity List */
+.activity-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1.5rem;
+}
+
+.activity-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: var(--transition);
+}
+
+.activity-item:hover {
+    background: var(--body-bg);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(66, 133, 244, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+}
+
+.activity-details {
+    flex: 1;
+}
+
+.activity-details h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+.activity-details p {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    color: var(--secondary-color);
+}
+
+/* Mini Stats */
+.mini-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.mini-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--body-bg);
+    border-radius: 5px;
+}
+
+.mini-stat i {
+    font-size: 1.25rem;
+    color: var(--primary-color);
+}
+
+.mini-stat .mini-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--secondary-color);
+}
+
+.mini-stat .mini-value {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* Charts Row */
+.charts-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 992px) {
+    .charts-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chart-card {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.chart-card h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.small-chart-wrapper {
+    height: 200px;
+    position: relative;
+}
+
+/* Loading */
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--secondary-color);
+}
+
+/* Quick Actions */
+.quick-actions {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: var(--body-bg);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.action-card:hover {
+    border-color: var(--primary-color);
+    background: var(--card-bg);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.action-card i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+</style>
+
+<script>
+// Chart variables
+let mainChart = null;
+let hourlyChart = null;
+let partyChart = null;
+let turnoutChart = null;
+
+// Chart data from backend
+const voteData = {{ vote_data|tojson }};
+
+// Initialize charts on page load
+document.addEventListener('DOMContentLoaded', function() {
+    createMainChart('bar');
+    createHourlyChart();
+    createPartyChart();
+    createTurnoutChart();
+    loadRecentVotes();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(loadRecentVotes, 30000);
+    setInterval(refreshChartData, 60000); // Refresh charts every minute
+});
+
+// Create main vote chart
+function createMainChart(type) {
+    const ctx = document.getElementById('voteChart').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (mainChart) {
+        mainChart.destroy();
+    }
+    
+    const labels = voteData.map(c => c.party);
+    const votes = voteData.map(c => c.votes);
+    const colors = generateColors(voteData.length);
+    
+    const config = {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Votes Received',
+                data: votes,
+                backgroundColor: type === 'bar' ? colors : colors.map(c => c + '0.8)'),
+                borderColor: type === 'bar' ? colors.map(c => c.replace('0.2', '1')) : colors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: type !== 'bar',
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: 'Vote Distribution by Candidate'
+                }
+            },
+            scales: type === 'bar' ? {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            } : undefined
+        }
+    };
+    
+    mainChart = new Chart(ctx, config);
+}
+
+// Create hourly voting trend chart
+function createHourlyChart() {
+    const ctx = document.getElementById('hourlyChart').getContext('2d');
+    
+    // Generate sample hourly data (in production, get from backend)
+    const hours = [];
+    const hourlyVotes = [];
+    for (let i = 0; i < 24; i++) {
+        hours.push(i + ':00');
+        hourlyVotes.push(Math.floor(Math.random() * 10)); // Replace with actual data
+    }
+    
+    hourlyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hours,
+            datasets: [{
+                label: 'Votes per Hour',
+                data: hourlyVotes,
+                borderColor: '#4285f4',
+                backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create party distribution chart
+function createPartyChart() {
+    const ctx = document.getElementById('partyChart').getContext('2d');
+    
+    // Group votes by party
+    const partyMap = new Map();
+    voteData.forEach(c => {
+        if (partyMap.has(c.party)) {
+            partyMap.set(c.party, partyMap.get(c.party) + c.votes);
+        } else {
+            partyMap.set(c.party, c.votes);
+        }
+    });
+    
+    const parties = Array.from(partyMap.keys());
+    const partyVotes = Array.from(partyMap.values());
+    const colors = generateColors(parties.length);
+    
+    partyChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: parties,
+            datasets: [{
+                data: partyVotes,
+                backgroundColor: colors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create voter turnout chart
+function createTurnoutChart() {
+    const ctx = document.getElementById('turnoutChart').getContext('2d');
+    
+    const voted = {{ voted_count }};
+    const notVoted = {{ total_voters - voted_count }};
+    
+    turnoutChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Voted', 'Not Voted'],
+            datasets: [{
+                data: [voted, notVoted],
+                backgroundColor: ['#28a745', '#dc3545'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Generate random colors for charts
+function generateColors(count) {
+    const colors = [];
+    const baseColors = [
+        'rgba(66, 133, 244, ',    // Blue
+        'rgba(52, 168, 83, ',      // Green
+        'rgba(251, 188, 4, ',      // Yellow
+        'rgba(234, 67, 53, ',      // Red
+        'rgba(128, 0, 128, ',      // Purple
+        'rgba(255, 165, 0, ',      // Orange
+        'rgba(0, 128, 128, ',      // Teal
+        'rgba(255, 192, 203, ',    // Pink
+        'rgba(165, 42, 42, ',      // Brown
+        'rgba(128, 128, 128, '     // Gray
+    ];
+    
+    for (let i = 0; i < count; i++) {
+        colors.push(baseColors[i % baseColors.length] + '0.2)');
+    }
+    
+    return colors;
+}
+
+// Change chart type
+function changeChartType(type) {
+    // Update active button
+    document.querySelectorAll('.chart-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Recreate chart
+    createMainChart(type);
+}
+
+// Export chart as image
+function exportChart() {
+    const canvas = document.getElementById('voteChart');
+    const link = document.createElement('a');
+    link.download = 'vote-chart.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+// Refresh chart data
+async function refreshChartData() {
+    try {
+        const response = await fetch('/api/vote_counts');
+        const data = await response.json();
+        
+        // Update main chart
+        mainChart.data.datasets[0].data = data.map(c => c.votes);
+        mainChart.update();
+        
+        // Update party chart
+        const partyMap = new Map();
+        data.forEach(c => {
+            if (partyMap.has(c.party)) {
+                partyMap.set(c.party, partyMap.get(c.party) + c.votes);
+            } else {
+                partyMap.set(c.party, c.votes);
+            }
+        });
+        
+        partyChart.data.labels = Array.from(partyMap.keys());
+        partyChart.data.datasets[0].data = Array.from(partyMap.values());
+        partyChart.update();
+        
+    } catch (error) {
+        console.error('Error refreshing chart data:', error);
+    }
+}
+
+// Load recent votes
+async function loadRecentVotes() {
+    try {
+        const response = await fetch('/api/recent_votes');
+        const data = await response.json();
+        
+        const container = document.getElementById('recentVotes');
+        container.innerHTML = '';
+        
+        if (data.length === 0) {
+            container.innerHTML = '<div class="activity-item">No votes yet</div>';
+            return;
+        }
+        
+        data.forEach(vote => {
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.innerHTML = `
+                <div class="activity-icon">
+                    <i class="fas fa-vote-yea"></i>
+                </div>
+                <div class="activity-details">
+                    <h4>${vote.voter} voted for ${vote.candidate}</h4>
+                    <p>${vote.time} • ${vote.location}</p>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+        
+        // Update mini stats
+        if (data.length > 0) {
+            document.getElementById('lastVoteTime').textContent = data[0].time;
+        }
+        
+        // Count unique locations
+        const locations = new Set(data.map(v => v.location));
+        document.getElementById('activeLocations').textContent = locations.size;
+        
+    } catch (error) {
+        console.error('Error loading recent votes:', error);
+    }
+}
+
+// Export data
+function exportData() {
+    if (confirm('Export all voting data as CSV?')) {
+        window.location.href = "{{ url_for('export_receipts') }}?format=csv";
+    }
+}
+
+// Generate PDF report
+function generateReport() {
+    if (confirm('Generate comprehensive election report?')) {
+        window.location.href = "{{ url_for('export_receipts') }}?format=pdf";
+    }
+}
+
+// Refresh system
+function refreshSystem() {
+    if (confirm('Refresh system data?')) {
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,719 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h1><i class="fas fa-receipt"></i> Vote Receipts</h1>
+        <p>View and manage all voting receipts</p>
+        
+    </div>
+    
+    <div class="admin-nav">
+        <a href="{{ url_for('admin_dashboard') }}">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{{ url_for('manage_voters') }}">
+            <i class="fas fa-users"></i> Manage Voters
+        </a>
+        <a href="{{ url_for('manage_candidates') }}">
+            <i class="fas fa-user-tie"></i> Manage Candidates
+        </a>
+        <a href="{{ url_for('vote_receipts') }}" class="active">
+            <i class="fas fa-receipt"></i> Vote Receipts
+        </a>
+        <a href="{{ url_for('logout') }}" class="logout">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+    
+    <div class="receipts-container">
+        <div class="receipts-filters">
+            <div class="filter-group">
+                <label>Filter by Date:</label>
+                <input type="date" id="filterDate" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label>Filter by Candidate:</label>
+                <select id="filterCandidate" class="form-control">
+                    <option value="">All Candidates</option>
+                    {% for candidate in candidates %}
+                    <option value="{{ candidate.name }}">{{ candidate.name }} ({{ candidate.party_name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Filter by Status:</label>
+                <select id="filterStatus" class="form-control">
+                    <option value="">All Status</option>
+                    <option value="VALID">Valid</option>
+                    <option value="INVALID">Invalid</option>
+                    <option value="PENDING">Pending</option>
+                </select>
+            </div>
+            <button class="btn btn-secondary" onclick="clearFilters()">
+                <i class="fas fa-times"></i> Clear Filters
+            </button>
+        </div>
+        
+        <div class="receipts-stats">
+            <div class="stat-item">
+                <i class="fas fa-receipt"></i>
+                <div>
+                    <h3>{{ receipts|length }}</h3>
+                    <p>Total Receipts</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                    <h3>{{ receipts|selectattr('status', 'equalto', 'VALID')|list|length }}</h3>
+                    <p>Valid Votes</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-times-circle"></i>
+                <div>
+                    <h3>{{ receipts|selectattr('status', 'equalto', 'INVALID')|list|length }}</h3>
+                    <p>Invalid Votes</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <h3>{{ receipts|selectattr('status', 'equalto', 'PENDING')|list|length }}</h3>
+                    <p>Pending Review</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="receipts-table-container">
+            <table class="receipts-table">
+                <thead>
+                    <tr>
+                        <th>Receipt No.</th>
+                        <th>Voter Name</th>
+                        <th>Voter ID</th>
+                        <th>Candidate</th>
+                        <th>Party</th>
+                        <th>Timestamp</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="receiptsTable">
+                    {% for receipt in receipts %}
+                    <tr>
+                        <td>
+                            <a href="#" onclick="viewReceipt('{{ receipt.receipt_number }}')" class="receipt-link">
+                                {{ receipt.receipt_number }}
+                            </a>
+                        </td>
+                        <td>{{ receipt.voter_name }}</td>
+                        <td>{{ receipt.voter_id }}</td>
+                        <td>{{ receipt.candidate_name }}</td>
+                        <td>{{ receipt.candidate_party }}</td>
+                        <td>{{ receipt.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ receipt.location[:20] }}{% if receipt.location|length > 20 %}...{% endif %}</td>
+                        <td>
+                            <span class="status-badge status-{{ receipt.status|lower }}">
+                                {{ receipt.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-info" onclick="viewReceipt('{{ receipt.receipt_number }}')" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="printReceipt('{{ receipt.receipt_number }}')" title="Print Receipt">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <div class="btn-group-sm">
+                                    <button class="btn btn-sm btn-success" onclick="updateReceiptStatus('{{ receipt.receipt_number }}', 'VALID')" title="Mark as Valid">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="updateReceiptStatus('{{ receipt.receipt_number }}', 'PENDING')" title="Mark as Pending">
+                                        <i class="fas fa-clock"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="updateReceiptStatus('{{ receipt.receipt_number }}', 'INVALID')" title="Mark as Invalid">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="receipts-actions">
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="exportReceipts()">
+                    <i class="fas fa-file-export"></i> Export All Receipts
+                </button>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('export_receipts') }}?format=pdf" target="_blank">
+                        <i class="fas fa-file-pdf"></i> Export as PDF
+                    </a>
+                    <a href="{{ url_for('export_receipts') }}?format=csv">
+                        <i class="fas fa-file-csv"></i> Export as CSV
+                    </a>
+                </div>
+            </div>
+            <button class="btn btn-danger" onclick="auditVotes()">
+                <i class="fas fa-search"></i> Run Vote Audit
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Details Modal -->
+<div id="receiptModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Receipt Details</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="receiptDetails">
+            <!-- Receipt details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Audit Results Modal -->
+<div id="auditModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Vote Audit Results</h2>
+            <span class="close" onclick="closeAuditModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="auditDetails">
+            <!-- Audit results will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-nav {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 10px;
+}
+
+.admin-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.75rem 1.5rem;
+    background: var(--body-bg);
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 5px;
+    transition: var(--transition);
+}
+
+.admin-nav a:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.admin-nav a.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.admin-nav a.logout {
+    background: var(--danger-color);
+    color: white;
+}
+
+.admin-nav a.logout:hover {
+    background: #c82333;
+}
+
+.receipts-container {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.receipts-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.receipts-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--body-bg);
+    border-radius: 10px;
+}
+
+.stat-item i {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.stat-item h3 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.stat-item p {
+    margin: 0;
+    color: var(--secondary-color);
+    font-size: 0.875rem;
+}
+
+.receipts-table-container {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+
+.receipts-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.receipts-table thead {
+    background: var(--primary-color);
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.receipts-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+.receipts-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.receipt-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.receipt-link:hover {
+    text-decoration: underline;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-valid {
+    background: rgba(24, 153, 54, 0.986);
+    color: #f6f8f6;
+}
+
+.status-invalid {
+    background: rgba(220, 53, 69, 0.2);
+    color: #721c24;
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: #856404;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-group-sm {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.receipts-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.btn-group {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 200px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 5px;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 5px;
+}
+
+.btn-group:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dropdown-content a:hover {
+    background-color: #f1f1f1;
+    border-radius: 5px;
+}
+
+.dropdown-content i {
+    width: 20px;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 10px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+.receipt-detail-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.receipt-detail-item strong {
+    display: inline-block;
+    width: 120px;
+    color: #666;
+}
+
+.audit-result-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.audit-result-item.passed {
+    background: rgba(40, 167, 69, 0.1);
+    border-left: 4px solid #28a745;
+}
+
+.audit-result-item.issues {
+    background: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid #dc3545;
+}
+</style>
+
+<script>
+function viewReceipt(receiptNumber) {
+    // In production, fetch receipt details from API
+    fetch(`/admin/print_receipt/${receiptNumber}`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        })
+        .catch(error => {
+            // Fallback to modal view
+            showReceiptModal(receiptNumber);
+        });
+}
+
+function showReceiptModal(receiptNumber) {
+    // Find receipt from table
+    const rows = document.querySelectorAll('#receiptsTable tr');
+    let receiptData = null;
+    
+    for (let row of rows) {
+        if (row.cells[0]?.textContent.trim() === receiptNumber) {
+            receiptData = {
+                number: row.cells[0].textContent.trim(),
+                voter_name: row.cells[1].textContent.trim(),
+                voter_id: row.cells[2].textContent.trim(),
+                candidate: row.cells[3].textContent.trim(),
+                party: row.cells[4].textContent.trim(),
+                timestamp: row.cells[5].textContent.trim(),
+                location: row.cells[6].textContent.trim(),
+                status: row.cells[7].textContent.trim()
+            };
+            break;
+        }
+    }
+    
+    if (receiptData) {
+        const modal = document.getElementById('receiptModal');
+        const details = document.getElementById('receiptDetails');
+        
+        details.innerHTML = `
+            <div class="receipt-detail-item">
+                <strong>Receipt Number:</strong> ${receiptData.number}
+            </div>
+            <div class="receipt-detail-item">
+                <strong>Voter Name:</strong> ${receiptData.voter_name}
+            </div>
+            <div class="receipt-detail-item">
+                <strong>Voter ID:</strong> ${receiptData.voter_id}
+            </div>
+            <div class="receipt-detail-item">
+                <strong>Candidate:</strong> ${receiptData.candidate}
+            </div>
+            <div class="receipt-detail-item">
+                <strong>Party:</strong> ${receiptData.party}
+            </div>
+            <div class="receipt-detail-item">
+                <strong>Timestamp:</strong> ${receiptData.timestamp}
+            </div>
+            <div class="receipt-detail-item">
+                <strong>Location:</strong> ${receiptData.location}
+            </div>
+            <div class="receipt-detail-item">
+                <strong>Status:</strong> 
+                <span class="status-badge status-${receiptData.status.toLowerCase()}">${receiptData.status}</span>
+            </div>
+        `;
+        
+        modal.style.display = 'block';
+    }
+}
+
+function closeModal() {
+    document.getElementById('receiptModal').style.display = 'none';
+}
+
+function printReceipt(receiptNumber) {
+    window.open(`/admin/print_receipt/${receiptNumber}`, '_blank');
+}
+
+function updateReceiptStatus(receiptNumber, status) {
+    if (confirm(`Mark receipt ${receiptNumber} as ${status}?`)) {
+        fetch(`/admin/validate_receipt/${receiptNumber}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error updating receipt status');
+        });
+    }
+}
+
+function exportReceipts() {
+    // This will trigger the PDF download via the route
+    window.location.href = "{{ url_for('export_receipts') }}?format=pdf";
+}
+
+function auditVotes() {
+    if (confirm('Run comprehensive vote audit? This may take a few moments.')) {
+        fetch('/admin/audit_votes', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showAuditResults(data);
+        })
+        .catch(error => {
+            alert('Error running audit');
+        });
+    }
+}
+
+function showAuditResults(data) {
+    const modal = document.getElementById('auditModal');
+    const details = document.getElementById('auditDetails');
+    
+    let anomaliesHtml = '';
+    if (data.anomalies && data.anomalies.length > 0) {
+        anomaliesHtml = '<h3>Anomalies Found:</h3><ul>';
+        data.anomalies.forEach(anomaly => {
+            anomaliesHtml += `<li>${anomaly}</li>`;
+        });
+        anomaliesHtml += '</ul>';
+    } else {
+        anomaliesHtml = '<p>No anomalies found. System is healthy!</p>';
+    }
+    
+    details.innerHTML = `
+        <div class="audit-result-item ${data.anomalies_found ? 'issues' : 'passed'}">
+            <h3>Audit Status: ${data.status}</h3>
+        </div>
+        <div class="audit-result-item">
+            <strong>Timestamp:</strong> ${data.timestamp}
+        </div>
+        <div class="audit-result-item">
+            <strong>Total Votes:</strong> ${data.total_votes}
+        </div>
+        <div class="audit-result-item">
+            <strong>Total Voters:</strong> ${data.total_voters}
+        </div>
+        <div class="audit-result-item">
+            <strong>Voters Who Voted:</strong> ${data.voted_voters}
+        </div>
+        <div class="audit-result-item">
+            <strong>Voter Turnout:</strong> ${data.voter_turnout}
+        </div>
+        ${anomaliesHtml}
+    `;
+    
+    modal.style.display = 'block';
+}
+
+function closeAuditModal() {
+    document.getElementById('auditModal').style.display = 'none';
+}
+
+function clearFilters() {
+    document.getElementById('filterDate').value = '';
+    document.getElementById('filterCandidate').value = '';
+    document.getElementById('filterStatus').value = '';
+    filterReceipts();
+}
+
+function filterReceipts() {
+    const dateFilter = document.getElementById('filterDate').value;
+    const candidateFilter = document.getElementById('filterCandidate').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    
+    const rows = document.querySelectorAll('#receiptsTable tr');
+    
+    rows.forEach(row => {
+        const date = row.cells[5]?.textContent.split(' ')[0] || '';
+        const candidate = row.cells[3]?.textContent || '';
+        const status = row.cells[7]?.textContent.trim() || '';
+        
+        let show = true;
+        
+        if (dateFilter && !date.includes(dateFilter)) {
+            show = false;
+        }
+        if (candidateFilter && candidate !== candidateFilter) {
+            show = false;
+        }
+        if (statusFilter && status !== statusFilter) {
+            show = false;
+        }
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// Add event listeners for filters
+document.getElementById('filterDate')?.addEventListener('change', filterReceipts);
+document.getElementById('filterCandidate')?.addEventListener('change', filterReceipts);
+document.getElementById('filterStatus')?.addEventListener('change', filterReceipts);
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('receiptModal');
+    const auditModal = document.getElementById('auditModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+    if (event.target == auditModal) {
+        auditModal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

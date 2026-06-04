@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h1><i class="fas fa-users"></i> </h1>
+        <p></p>
+    </div>
+    
+    <div class="admin-nav">
+        <a href="{{ url_for('admin_dashboard') }}">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{{ url_for('manage_voters') }}" class="active">
+            <i class="fas fa-users"></i> Manage Voters
+        </a>
+        <a href="{{ url_for('manage_candidates') }}">
+            <i class="fas fa-user-tie"></i> Manage Candidates
+        </a>
+        <a href="{{ url_for('vote_receipts') }}">
+            <i class="fas fa-receipt"></i> Vote Receipts
+        </a>
+<a href="{{ url_for('admin_login') }}" class="logout">
+    <i class="fas fa-sign-out-alt"></i> Logout
+</a>
+    </div>
+    
+    <!-- Edit Voter Modal -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Voter</h3>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('manage_voters') }}" id="editVoterForm">
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="old_voter_id" id="editOldVoterId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editVoterId">Voter ID</label>
+                            <input type="text" id="editVoterId" name="voter_id" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editName">Full Name</label>
+                            <input type="text" id="editName" name="name" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editEmail">Email Address</label>
+                            <input type="email" id="editEmail" name="email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editDob">Date of Birth</label>
+                            <input type="date" id="editDob" name="dob" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editAddress">Address</label>
+                        <textarea id="editAddress" name="address" class="form-control" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="management-section">
+        <div class="add-form-section">
+            <h3><i class="fas fa-user-plus"></i> Add New Voter</h3>
+            <form method="POST" action="{{ url_for('manage_voters') }}">
+                <input type="hidden" name="action" value="add">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Voter ID</label>
+                        <input type="text" name="voter_id" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" name="dob" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea name="address" class="form-control" rows="3" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Add Voter
+                </button>
+            </form>
+        </div>
+        
+        <div class="voters-list-section">
+            <h3><i class="fas fa-list"></i> Registered Voters ({{ voters|length }})</h3>
+            
+            <div class="search-box">
+                <input type="text" id="searchVoters" placeholder="Search voters..." class="form-control">
+            </div>
+            
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Voter ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Voted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="votersTable">
+                        {% for voter in voters %}
+                        <tr>
+                            <td>{{ voter.voter_id }}</td>
+                            <td>{{ voter.name }}</td>
+                            <td>{{ voter.email }}</td>
+                            <td>
+                                <span class="status-badge {{ 'verified' if voter.is_verified else 'pending' }}">
+                                    {{ 'Verified' if voter.is_verified else 'Pending' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge {{ 'voted' if voter.has_voted else 'not-voted' }}">
+                                    {{ 'Voted' if voter.has_voted else 'Not Voted' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-info" onclick="editVoter('{{ voter.voter_id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <form method="POST" action="{{ url_for('manage_voters') }}" style="display: inline;" onsubmit="return confirmDeleteVoter('{{ voter.name }}', '{{ voter.has_voted }}')">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="voter_id" value="{{ voter.voter_id }}">
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('manage_voters') }}" style="display: inline;">
+                                        <input type="hidden" name="action" value="toggle_verify">
+                                        <input type="hidden" name="voter_id" value="{{ voter.voter_id }}">
+                                        <button type="submit" class="btn btn-sm {{ 'btn-warning' if voter.is_verified else 'btn-success' }}">
+                                            <i class="fas fa-{{ 'ban' if voter.is_verified else 'check' }}"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="table-actions">
+                <button class="btn btn-secondary" onclick="exportVoters()">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+                <button class="btn btn-secondary" onclick="printTable()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .modal-content {
+        background-color: var(--card-bg);
+        margin: 5% auto;
+        padding: 0;
+        width: 90%;
+        max-width: 600px;
+        border-radius: 10px;
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+    
+    .modal-header {
+        padding: 1rem 1.5rem;
+        background: var(--primary-color);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .close {
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    
+    .close:hover {
+        color: #ff6b6b;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+        justify-content: flex-end;
+    }
+
+    .admin-nav {
+        display: flex;
+        gap: 3rem;
+        margin-bottom: 4rem;
+        flex-wrap: wrap;
+        background: var(--card-bg);
+        padding: 2rem;
+        border-radius: 10px;
+    }
+
+    .admin-nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.75rem 1.5rem;
+        background: var(--body-bg);
+        color: var(--text-color);
+        text-decoration: none;
+        border-radius: 5px;
+        transition: var(--transition);
+    }
+
+    .admin-nav a:hover {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .admin-nav a.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .admin-nav a.logout {
+        background: var(--danger-color);
+        color: white;
+    }
+
+    .admin-nav a.logout:hover {
+        background: #c82333;
+    }
+
+    .management-section {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+    }
+
+    @media (max-width: 992px) {
+        .management-section {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .add-form-section, .voters-list-section {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+    }
+
+    .add-form-section h3, .voters-list-section h3 {
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .search-box {
+        margin-bottom: 1rem;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .admin-table thead {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .admin-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .admin-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .status-badge.verified {
+        background: rgba(40, 167, 69, 0.2);
+        color: #2ad652;
+    }
+
+    .status-badge.pending {
+        background: rgba(255, 193, 7, 0.2);
+        color: #856404;
+    }
+
+    .status-badge.voted {
+        background: rgba(74, 107, 255, 0.2);
+        color: var(--primary-color);
+    }
+
+    .status-badge.not-voted {
+        background: rgba(108, 117, 125, 0.2);
+        color: var(--secondary-color);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .table-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        justify-content: flex-end;
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+</style>
+
+<script>
+// Edit Voter Functionality
+function editVoter(voterId) {
+    // Fetch voter data from the server
+    fetch(`/api/voter/${voterId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fill the edit form with voter data
+                document.getElementById('editOldVoterId').value = data.voter_id;
+                document.getElementById('editVoterId').value = data.voter_id;
+                document.getElementById('editName').value = data.name;
+                document.getElementById('editEmail').value = data.email;
+                document.getElementById('editDob').value = data.date_of_birth;
+                document.getElementById('editAddress').value = data.address;
+                
+                // Show the modal
+                document.getElementById('editModal').style.display = 'block';
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to fetch voter data');
+        });
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('editModal');
+    if (event.target == modal) {
+        closeEditModal();
+    }
+}
+
+// Delete confirmation with warning for voted voters
+function confirmDeleteVoter(voterName, hasVoted) {
+    if (hasVoted === 'True') {
+        return confirm(`⚠️ WARNING: ${voterName} has already voted!\n\nDeleting this voter will also delete their vote record. Are you sure you want to proceed?`);
+    } else {
+        return confirm(`Are you sure you want to delete voter "${voterName}"?`);
+    }
+}
+
+function exportVoters() {
+    alert('Export voters as CSV feature would be implemented');
+}
+
+function printTable() {
+    window.print();
+}
+
+// Search functionality
+document.getElementById('searchVoters').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#votersTable tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Form validation for edit form
+document.getElementById('editVoterForm').addEventListener('submit', function(e) {
+    const voterId = document.getElementById('editVoterId').value.trim();
+    const name = document.getElementById('editName').value.trim();
+    const email = document.getElementById('editEmail').value.trim();
+    
+    if (!voterId || !name || !email) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Validate voter ID format (alphanumeric with optional underscores and hyphens)
+    if (!/^[A-Za-z0-9_-]+$/.test(voterId)) {
+        e.preventDefault();
+        alert('Voter ID can only contain letters, numbers, underscores and hyphens.');
+        return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        e.preventDefault();
+        alert('Please enter a valid email address.');
+        return;
+    }
+});
+
+// Form validation for add form
+document.querySelector('.add-form-section form').addEventListener('submit', function(e) {
+    const voterId = this.querySelector('input[name="voter_id"]').value.trim();
+    const name = this.querySelector('input[name="name"]').value.trim();
+    const email = this.querySelector('input[name="email"]').value.trim();
+    
+    if (!voterId || !name || !email) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Validate voter ID format
+    if (!/^[A-Za-z0-9_-]+$/.test(voterId)) {
+        e.preventDefault();
+        alert('Voter ID can only contain letters, numbers, underscores and hyphens.');
+        return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        e.preventDefault();
+        alert('Please enter a valid email address.');
+        return;
+    }
+});
+</script>
+{% endblock %}

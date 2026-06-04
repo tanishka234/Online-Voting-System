@@ -1,0 +1,1103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h1><i class="fas fa-user-tie"></i> Manage Candidates</h1>
+        <p>Add, edit, and manage election candidates</p>
+    </div>
+    
+    <div class="admin-nav">
+        <a href="{{ url_for('admin_dashboard') }}">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{{ url_for('manage_voters') }}">
+            <i class="fas fa-users"></i> Manage Voters
+        </a>
+        <a href="{{ url_for('manage_candidates') }}" class="active">
+            <i class="fas fa-user-tie"></i> Manage Candidates
+        </a>
+        <a href="{{ url_for('vote_receipts') }}">
+            <i class="fas fa-receipt"></i> Vote Receipts
+        </a>
+        <a href="{{ url_for('logout') }}" class="logout">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+    
+    <!-- Edit Candidate Modal -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Candidate</h3>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('manage_candidates') }}" id="editCandidateForm">
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="old_candidate_id" id="editOldCandidateId">
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editCandidateId">Candidate ID *</label>
+                            <input type="text" id="editCandidateId" name="candidate_id" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editName">Full Name *</label>
+                            <input type="text" id="editName" name="name" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editPartyName">Party Name *</label>
+                            <input type="text" id="editPartyName" name="party_name" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editPartySymbol">Party Symbol URL</label>
+                            <input type="url" id="editPartySymbol" name="party_symbol" class="form-control">
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="editCandidatePhoto">Candidate Photo URL</label>
+                            <input type="url" id="editCandidatePhoto" name="candidate_photo" class="form-control">
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="editManifesto">Manifesto *</label>
+                            <textarea id="editManifesto" name="manifesto" class="form-control" rows="5" required></textarea>
+                            <div class="char-count">
+                                <span id="editCharCount">0</span>/500 characters
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="management-section">
+        <div class="add-form-section">
+            <h3><i class="fas fa-user-plus"></i> Add New Candidate</h3>
+            <form method="POST" action="{{ url_for('manage_candidates') }}" id="candidateForm">
+                <input type="hidden" name="action" value="add">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="candidate_id">Candidate ID *</label>
+                        <input type="text" id="candidate_id" name="candidate_id" class="form-control" 
+                               placeholder="Enter unique candidate ID" required>
+                        <small class="form-text">Unique identifier for the candidate</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="name">Full Name *</label>
+                        <input type="text" id="name" name="name" class="form-control" 
+                               placeholder="Enter candidate's full name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="party_name">Party Name *</label>
+                        <input type="text" id="party_name" name="party_name" class="form-control" 
+                               placeholder="Enter political party name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="party_symbol">Party Symbol URL</label>
+                        <input type="url" id="party_symbol" name="party_symbol" class="form-control" 
+                               placeholder="https://example.com/symbol.png">
+                        <small class="form-text">Enter URL of party symbol image</small>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="candidate_photo">Candidate Photo URL</label>
+                        <input type="url" id="candidate_photo" name="candidate_photo" class="form-control" 
+                               placeholder="https://example.com/photo.jpg">
+                        <small class="form-text">Enter URL of candidate's profile photo</small>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="manifesto">Manifesto / Description *</label>
+                        <textarea id="manifesto" name="manifesto" class="form-control" 
+                                  rows="5" placeholder="Describe candidate's agenda, promises, and background" required></textarea>
+                        <div class="char-count">
+                            <span id="charCount">0</span>/500 characters
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-preview">
+                    <h4>Preview</h4>
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <div class="preview-avatar" id="previewAvatar">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="preview-info">
+                                <h4 id="previewName">Candidate Name</h4>
+                                <p class="preview-party" id="previewParty">Party Name</p>
+                                <p class="preview-id" id="previewId">ID: -----</p>
+                            </div>
+                        </div>
+                        <div class="preview-symbol" id="previewSymbol">
+                            <span>No symbol preview</span>
+                        </div>
+                        <div class="preview-description">
+                            <p id="previewManifesto">Manifesto will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="reset" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Reset Form
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Add Candidate
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="candidates-list-section">
+            <h3><i class="fas fa-list"></i> All Candidates ({{ candidates|length }})</h3>
+            
+            <div class="search-filter">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchCandidates" placeholder="Search candidates by name, party, or ID..." class="form-control">
+                </div>
+                <div class="filter-options">
+                    <select id="filterStatus" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                    </select>
+                </div>
+            </div>
+            
+            {% if candidates|length == 0 %}
+            <div class="empty-state">
+                <i class="fas fa-user-tie fa-3x"></i>
+                <h4>No Candidates Found</h4>
+                <p>Add your first candidate using the form above</p>
+            </div>
+            {% else %}
+            <div class="candidates-grid">
+                {% for candidate in candidates %}
+                {% set vote_count = namespace(value=0) %}
+                {% for vote in votes if vote.candidate_id == candidate.candidate_id %}
+                    {% set vote_count.value = vote_count.value + 1 %}
+                {% endfor %}
+                
+                <div class="candidate-admin-card" data-status="{{ 'active' if candidate.is_active else 'inactive' }}" data-candidate-id="{{ candidate.candidate_id }}">
+                    <div class="candidate-header">
+                        <div class="candidate-avatar">
+                            {% if candidate.candidate_photo %}
+                            <img src="{{ candidate.candidate_photo }}" alt="{{ candidate.name }}" 
+                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iMzAiIGZpbGw9IiM0Mjg1RjQiLz4KPHBhdGggZD0iTTMwIDM1QzMzLjMxMzcgMzUgMzYgMzIuMzEzNyAzNiAyOUMzNiAyNS42ODYzIDMzLjMxMzcgMjMgMzAgMjNDMjYuNjg2MyAyMyAyNCAyNS42ODYzIDI0IDI5QzI0IDMyLjMxMzcgMjYuNjg2MyAzNSAzMCAzNVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yMi41IDQwLjVDMjIuNSA0MS44ODA3IDIzLjYxOTMgNDMgMjUgNDNIMzVDMzYuMzgwNyA0MyAzNy41IDQxLjg4MDcgMzcuNSA0MC41QzM3LjUgMzguODA5MyAzNi43NSAzNi4zIDM0LjI5NzkgMzQuNTUyOUMzMi40MTkzIDMzLjE4NTcgMjkuNzAwNyAzMi41IDMwIDMyLjVDMjkuNzAwNyAzMi41IDI3LjU4MDcgMzMuMTg1NyAyNS43MDIxIDM0LjU1MjlDMjMuMjUgMzYuMyAyMi41IDM4LjgwOTMgMjIuNSA0MC41WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+'">
+                            {% else %}
+                            <i class="fas fa-user-tie"></i>
+                            {% endif %}
+                        </div>
+                        <div class="candidate-info">
+                            <h4>{{ candidate.name }}</h4>
+                            <p class="party">
+                                <i class="fas fa-flag"></i> {{ candidate.party_name }}
+                            </p>
+                            <p class="candidate-id">
+                                <i class="fas fa-id-card"></i> ID: {{ candidate.candidate_id }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if candidate.party_symbol %}
+                    <div class="candidate-symbol">
+                        <div class="symbol-label">Party Symbol:</div>
+                        <img src="{{ candidate.party_symbol }}" alt="{{ candidate.party_name }} symbol" 
+                             class="party-symbol-img" 
+                             onerror="this.style.display='none'; this.parentElement.innerHTML='<span>Symbol: Invalid URL</span>'">
+                    </div>
+                    {% endif %}
+                    
+                    <div class="candidate-description">
+                        <p>{{ candidate.manifesto[:150] }}{% if candidate.manifesto|length > 150 %}...{% endif %}</p>
+                    </div>
+                    
+                    <div class="candidate-status">
+                        <span class="status-badge {{ 'active' if candidate.is_active else 'inactive' }}">
+                            <i class="fas fa-{{ 'check-circle' if candidate.is_active else 'times-circle' }}"></i>
+                            {{ 'Active' if candidate.is_active else 'Inactive' }}
+                        </span>
+                        <span class="vote-count">
+                            <i class="fas fa-vote-yea"></i>
+                            {{ vote_count.value }} votes
+                        </span>
+                    </div>
+                    
+                    <div class="candidate-actions">
+                        <form method="POST" action="{{ url_for('manage_candidates') }}" style="display: inline;">
+                            <input type="hidden" name="action" value="toggle">
+                            <input type="hidden" name="candidate_id" value="{{ candidate.candidate_id }}">
+                            <button type="submit" class="btn btn-sm {{ 'btn-warning' if candidate.is_active else 'btn-success' }}">
+                                <i class="fas fa-{{ 'ban' if candidate.is_active else 'check' }}"></i>
+                                {{ 'Deactivate' if candidate.is_active else 'Activate' }}
+                            </button>
+                        </form>
+                        <button class="btn btn-sm btn-info" onclick="editCandidate('{{ candidate.candidate_id }}', '{{ candidate.name|replace("'", "\\'") }}', '{{ candidate.party_name|replace("'", "\\'") }}', '{{ candidate.party_symbol|default("")|replace("'", "\\'") }}', '{{ candidate.candidate_photo|default("")|replace("'", "\\'") }}', '{{ candidate.manifesto|replace("'", "\\'")|replace("\n", "\\n")|replace("\r", "\\r") }}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <form method="POST" action="{{ url_for('manage_candidates') }}" style="display: inline;">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="candidate_id" value="{{ candidate.candidate_id }}">
+                            <button type="submit" class="btn btn-sm btn-danger" 
+                                    onclick="return confirmDeleteCandidate('{{ candidate.name }}', {{ vote_count.value }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.management-section {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+@media (max-width: 1200px) {
+    .management-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 5% auto;
+    padding: 0;
+    width: 90%;
+    max-width: 700px;
+    border-radius: 15px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s;
+    overflow: hidden;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 1.5rem 2rem;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.close {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.close:hover {
+    color: #ff6b6b;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Form Styles */
+.add-form-section {
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+}
+
+.add-form-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: span 2;
+}
+
+.form-group label {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.form-control {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--body-bg);
+    color: var(--text-color);
+    transition: var(--transition);
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+.form-control::placeholder {
+    color: #aaa;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.char-count {
+    text-align: right;
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    margin-top: 0.25rem;
+}
+
+/* Form Preview */
+.form-preview {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--body-bg);
+    border-radius: 10px;
+    border: 1px dashed var(--border-color);
+}
+
+.form-preview h4 {
+    margin-bottom: 1rem;
+    color: var(--secondary-color);
+}
+
+.preview-card {
+    padding: 1.5rem;
+    background: var(--card-bg);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.preview-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary-color), #6c63ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.75rem;
+    overflow: hidden;
+}
+
+.preview-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-info h4 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+
+.preview-party {
+    margin: 0.25rem 0;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.preview-id {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+}
+
+.preview-symbol {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--body-bg);
+    border-radius: 8px;
+    text-align: center;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-symbol img {
+    max-width: 100%;
+    max-height: 60px;
+    object-fit: contain;
+}
+
+.preview-description {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.preview-description p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-color);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Candidates List */
+.candidates-list-section {
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.search-filter {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    flex: 1;
+    position: relative;
+    min-width: 300px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--secondary-color);
+}
+
+.search-box input {
+    padding-left: 3rem;
+}
+
+.filter-options {
+    min-width: 200px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--secondary-color);
+}
+
+.empty-state i {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h4 {
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+/* Candidate Cards */
+.candidates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.candidate-admin-card {
+    background: var(--body-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+}
+
+.candidate-admin-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.candidate-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.candidate-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary-color), #6c63ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.75rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.candidate-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.candidate-info {
+    flex: 1;
+}
+
+.candidate-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+    font-size: 1.25rem;
+}
+
+.candidate-info .party {
+    margin: 0.25rem 0;
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.candidate-info .candidate-id {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.candidate-symbol {
+    margin: 1rem 0;
+    padding: 0.75rem;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.symbol-label {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+.party-symbol-img {
+    max-width: 100%;
+    max-height: 60px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+.candidate-description {
+    flex: 1;
+    margin: 1rem 0;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.candidate-description p {
+    margin: 0;
+}
+
+.candidate-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1rem 0;
+    padding: 0.75rem;
+    background: var(--body-bg);
+    border-radius: 8px;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-badge.active {
+    background: rgba(40, 167, 69, 0.15);
+    color: #155724;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.status-badge.inactive {
+    background: rgba(220, 53, 69, 0.15);
+    color: #721c24;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.vote-count {
+    font-size: 0.875rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.candidate-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.875rem;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* Admin Nav Styles */
+.admin-nav {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 10px;
+}
+
+.admin-nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.75rem 1.25rem;
+    background: var(--body-bg);
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.admin-nav a:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.admin-nav a.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.admin-nav a.logout {
+    background: var(--danger-color);
+    color: white;
+}
+
+.admin-nav a.logout:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+</style>
+
+<script>
+// Form Preview Updates
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('candidateForm');
+    const inputs = form.querySelectorAll('input, textarea');
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', updatePreview);
+        input.addEventListener('change', updatePreview);
+    });
+    
+    // Character counter for manifesto
+    const manifesto = document.getElementById('manifesto');
+    const charCount = document.getElementById('charCount');
+    const editManifesto = document.getElementById('editManifesto');
+    const editCharCount = document.getElementById('editCharCount');
+    
+    manifesto.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+        if (this.value.length > 500) {
+            this.value = this.value.substring(0, 500);
+            charCount.textContent = 500;
+        }
+    });
+    
+    editManifesto.addEventListener('input', function() {
+        editCharCount.textContent = this.value.length;
+        if (this.value.length > 500) {
+            this.value = this.value.substring(0, 500);
+            editCharCount.textContent = 500;
+        }
+    });
+    
+    // Initialize preview
+    updatePreview();
+});
+
+function updatePreview() {
+    const name = document.getElementById('name').value || 'Candidate Name';
+    const party = document.getElementById('party_name').value || 'Party Name';
+    const candidateId = document.getElementById('candidate_id').value || '-----';
+    const manifesto = document.getElementById('manifesto').value || 'Manifesto will appear here...';
+    const photoUrl = document.getElementById('candidate_photo').value;
+    const symbolUrl = document.getElementById('party_symbol').value;
+    
+    // Update preview elements
+    document.getElementById('previewName').textContent = name;
+    document.getElementById('previewParty').textContent = party;
+    document.getElementById('previewId').textContent = `ID: ${candidateId}`;
+    document.getElementById('previewManifesto').textContent = manifesto;
+    
+    // Update photo preview
+    const avatarPreview = document.getElementById('previewAvatar');
+    if (photoUrl) {
+        avatarPreview.innerHTML = `<img src="${photoUrl}" alt="${name}" 
+            onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iMzUiIGZpbGw9IiM0Mjg1RjQiLz4KPHBhdGggZD0iTTM1IDQwLjVDMzkuMTQyMSA0MC41IDQyLjUgMzcuMTQyMSA0Mi41IDMzQzQyLjUgMjguODU3OSAzOS4xNDIxIDI1LjUgMzUgMjUuNUMzMC44NTc5IDI1LjUgMjcuNSAyOC44NTc5IDI3LjUgMzNDMjcuNSAzNy4xNDIxIDMwLjg1NzkgNDAuNSAzNSA0MC41WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTI2LjUgNDcuNUMzNy41IDQ3LjUgNDMuNSA0My44IDQzLjUgNDEuNUM0My41IDM5LjIgMzcuNSAzNS41IDI2LjUgMzUuNUMxNS41IDM1LjUgOS41IDM5LjIgOS41IDQxLjVDOS41IDQzLjggMTUuNSA0Ny41IDI2LjUgNDcuNVoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg=='; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.innerHTML='<i class=\"fas fa-user-tie\"></i>'">`;
+    } else {
+        avatarPreview.innerHTML = '<i class="fas fa-user-tie"></i>';
+    }
+    
+    // Update symbol preview
+    const symbolPreview = document.getElementById('previewSymbol');
+    if (symbolUrl) {
+        symbolPreview.innerHTML = `<img src="${symbolUrl}" alt="${party} symbol" 
+            onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<span>Invalid symbol URL</span>'">`;
+    } else {
+        symbolPreview.innerHTML = '<span>No symbol preview</span>';
+    }
+}
+
+// Search and Filter functionality
+document.getElementById('searchCandidates').addEventListener('input', filterCandidates);
+document.getElementById('filterStatus').addEventListener('change', filterCandidates);
+
+function filterCandidates() {
+    const searchTerm = document.getElementById('searchCandidates').value.toLowerCase();
+    const statusFilter = document.getElementById('filterStatus').value;
+    const cards = document.querySelectorAll('.candidate-admin-card');
+    
+    cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        const status = card.getAttribute('data-status');
+        
+        const matchesSearch = text.includes(searchTerm);
+        const matchesStatus = !statusFilter || status === statusFilter;
+        
+        card.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+    });
+}
+
+// Edit Candidate Functionality - COMPLETE WORKING VERSION
+function editCandidate(candidateId, name, partyName, partySymbol, candidatePhoto, manifesto) {
+    try {
+        // Decode the manifesto (it might have escaped characters)
+        const decodedManifesto = manifesto
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\'/g, "'")
+            .replace(/\\"/g, '"');
+        
+        // Fill the edit form with candidate data
+        document.getElementById('editOldCandidateId').value = candidateId;
+        document.getElementById('editCandidateId').value = candidateId;
+        document.getElementById('editName').value = decodeHTML(name);
+        document.getElementById('editPartyName').value = decodeHTML(partyName);
+        document.getElementById('editPartySymbol').value = decodeHTML(partySymbol || '');
+        document.getElementById('editCandidatePhoto').value = decodeHTML(candidatePhoto || '');
+        document.getElementById('editManifesto').value = decodedManifesto;
+        document.getElementById('editCharCount').textContent = decodedManifesto.length;
+        
+        // Show the modal
+        document.getElementById('editModal').style.display = 'block';
+        
+        // Scroll to top of modal
+        document.getElementById('editModal').scrollTop = 0;
+    } catch (error) {
+        console.error('Error in editCandidate:', error);
+        alert('Error loading candidate data. Please try again.');
+    }
+}
+
+// Helper function to decode HTML entities
+function decodeHTML(html) {
+    const txt = document.createElement('textarea');
+    txt.innerHTML = html;
+    return txt.value;
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('editModal');
+    if (event.target == modal) {
+        closeEditModal();
+    }
+}
+
+// Delete confirmation for candidate
+function confirmDeleteCandidate(candidateName, voteCount) {
+    if (voteCount > 0) {
+        return confirm(`⚠️ WARNING: "${candidateName}" has received ${voteCount} vote(s)!\n\nDeleting this candidate will remove all votes for them.\n\nAre you sure you want to delete?`);
+    } else {
+        return confirm(`Are you sure you want to delete candidate "${candidateName}"?`);
+    }
+}
+
+// Form validation before submit
+document.getElementById('candidateForm').addEventListener('submit', function(e) {
+    const candidateId = document.getElementById('candidate_id').value.trim();
+    const name = document.getElementById('name').value.trim();
+    
+    if (!candidateId || !name) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Validate candidate ID format (alphanumeric with optional underscores)
+    if (!/^[A-Za-z0-9_]+$/.test(candidateId)) {
+        e.preventDefault();
+        alert('Candidate ID can only contain letters, numbers, and underscores.');
+        return;
+    }
+});
+
+// Edit form validation
+document.getElementById('editCandidateForm').addEventListener('submit', function(e) {
+    const candidateId = document.getElementById('editCandidateId').value.trim();
+    const name = document.getElementById('editName').value.trim();
+    
+    if (!candidateId || !name) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Validate candidate ID format
+    if (!/^[A-Za-z0-9_]+$/.test(candidateId)) {
+        e.preventDefault();
+        alert('Candidate ID can only contain letters, numbers, and underscores.');
+        return;
+    }
+    
+    // Validate manifesto length
+    const manifesto = document.getElementById('editManifesto').value;
+    if (manifesto.length > 500) {
+        e.preventDefault();
+        alert('Manifesto cannot exceed 500 characters.');
+        return;
+    }
+});
+
+// Add keyboard shortcut to close modal with ESC key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeEditModal();
+    }
+});
+
+// Improve form reset functionality
+document.querySelector('#candidateForm button[type="reset"]').addEventListener('click', function() {
+    setTimeout(updatePreview, 100); // Update preview after reset
+});
+
+// Auto-focus on first input when modal opens
+document.getElementById('editModal').addEventListener('shown', function() {
+    document.getElementById('editCandidateId').focus();
+});
+</script>
+{% endblock %}
