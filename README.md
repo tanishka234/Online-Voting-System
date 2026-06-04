@@ -1,4 +1,4 @@
-<img width="975" height="461" alt="image" src="https://github.com/user-attachments/assets/6e0dcd17-ce1d-40ce-849e-8dfc70b730c8" /># 🗳️ Online Voting System
+# 🗳️ Online Voting System
 
 A secure and efficient web-based voting platform developed using Python, Flask, SQLite, HTML, CSS, and JavaScript. The system enables users to participate in elections digitally while ensuring transparency, security, and fairness throughout the voting process.
 
@@ -167,24 +167,28 @@ Provides administrative controls for managing the entire system.
 ## 📸 Screenshots
 
 ### Home Page
-![Uploading image.png…]()
-
+<img width="975" height="461" alt="image" src="https://github.com/user-attachments/assets/4f911294-5b4c-4761-bf22-279073c4d22a" />
 
 
 ### Login Page
-_Add screenshot here_
+<img width="975" height="460" alt="image" src="https://github.com/user-attachments/assets/5ebe28c9-8853-4ef1-9465-e17efb68a64f" />
+
 
 ### Registration Page
-_Add screenshot here_
+<img width="975" height="463" alt="image" src="https://github.com/user-attachments/assets/83258152-8099-49e9-b839-5c24a95ee4ab" />
 
-### Admin Dashboard
-_Add screenshot here_
 
-### Voting Page
-_Add screenshot here_
+### How To evote Page
+<img width="975" height="463" alt="image" src="https://github.com/user-attachments/assets/1502e266-5dab-4188-a06f-c067770f2985" />
 
-### Results Page
-_Add screenshot here_
+
+### About Page
+<img width="975" height="459" alt="image" src="https://github.com/user-attachments/assets/0b324c61-1120-46cd-8b41-67ae88b50335" />
+
+
+### Contact Page
+<img width="975" height="464" alt="image" src="https://github.com/user-attachments/assets/6a464f8d-2011-4531-99d1-c5dd602ad4d0" />
+
 
 ---
 
@@ -205,7 +209,7 @@ _Add screenshot here_
 
 **Tanishka Jain**
 
-B.Tech Computer Science Engineering
+BCA 
 
 Passionate about Software Development, Web Technologies, Data Analytics, and Artificial Intelligence.
 
